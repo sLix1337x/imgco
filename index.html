@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Free online MP4 to GIF converter. Convert your videos to high-quality animated GIFs instantly in your browser. No watermarks, no registration required.">
+    <meta name="keywords" content="mp4 to gif, video to gif, free gif converter, online gif maker, create gif from video">
+    <title>Free MP4 to GIF Converter | Instant Online Conversion</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>MP4 to GIF Converter</h1>
+            <p>Convert your videos to high-quality GIFs instantly - 100% free!</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="converter-section">
+            <div class="upload-area" id="dropArea">
+                <i class="fas fa-video icon"></i>
+                <h2>Upload MP4 File</h2>
+                <p>Drag & drop your video file here or click to browse</p>
+                <input type="file" id="fileInput" accept="video/mp4,video/*">
+                <div class="requirements">
+                    <p><i class="fas fa-info-circle"></i> Max file size: 50MB</p>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label for="quality">Quality:</label>
+                    <select id="quality">
+                        <option value="high">High</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="startTime">Start Time (sec):</label>
+                    <input type="number" id="startTime" min="0" value="0">
+                </div>
+                <div class="control-group">
+                    <label for="duration">Duration (sec):</label>
+                    <input type="number" id="duration" min="1" value="5">
+                </div>
+                <div class="control-group">
+                    <label for="fps">Frames per second:</label>
+                    <select id="fps">
+                        <option value="15">15</option>
+                        <option value="10" selected>10</option>
+                        <option value="5">5</option>
+                    </select>
+                </div>
+                <button id="convertBtn" disabled>Convert to GIF</button>
+            </div>
+
+            <div class="result-area hidden" id="resultArea">
+                <h3>Your GIF is ready!</h3>
+                <div class="gif-preview" id="gifPreview"></div>
+                <div class="result-actions">
+                    <a id="downloadBtn" class="btn-download" download="converted.gif">
+                        <i class="fas fa-download"></i> Download GIF
+                    </a>
+                    <button id="newConversionBtn" class="btn-new">
+                        <i class="fas fa-redo"></i> New Conversion
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="features-section">
+            <h2>Why Choose Our MP4 to GIF Converter?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <i class="fas fa-bolt"></i>
+                    <h3>Fast Conversion</h3>
+                    <p>Convert videos to GIFs in seconds with our optimized processing.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-lock"></i>
+                    <h3>Privacy Focused</h3>
+                    <p>All processing happens in your browser - we never see your files.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-dollar-sign"></i>
+                    <h3>100% Free</h3>
+                    <p>No watermarks, no subscriptions, no hidden fees.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-sliders-h"></i>
+                    <h3>Customizable</h3>
+                    <p>Adjust quality, duration, and frames to get perfect GIFs.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="how-to-section">
+            <h2>How to Convert MP4 to GIF</h2>
+            <ol class="steps">
+                <li>Upload your MP4 video file by dragging or clicking the upload area</li>
+                <li>Adjust conversion settings (optional)</li>
+                <li>Click "Convert to GIF"</li>
+                <li>Wait a moment for processing to complete</li>
+                <li>Download your new GIF file</li>
+            </ol>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>© 2023 Free MP4 to GIF Converter. All rights reserved.</p>
+            <div class="footer-links">
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Service</a>
+                <a href="#">Contact</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- FFmpeg library for conversion -->
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
