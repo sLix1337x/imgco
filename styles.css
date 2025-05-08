@@ -7,6 +7,7 @@
     --dark-color: #212529;
     --success-color: #4bb543;
     --error-color: #f44336;
+    --loading-color: #4361ee;
     --border-radius: 8px;
     --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     --transition: all 0.3s ease;
@@ -111,6 +112,14 @@ header p {
 .requirements i {
     margin-right: 0.3rem;
     color: var(--primary-color);
+}
+
+.loading-status {
+    margin-top: 1rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: var(--transition);
+    min-height: 1.5rem;
 }
 
 /* Controls Section */
@@ -389,5 +398,25 @@ footer p {
     .btn-new {
         width: 100%;
         justify-content: center;
+    }
+    .alternative-options {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: #fff8e1;
+        border-radius: var(--border-radius);
+        border-left: 4px solid #ffc107;
+    }
+    
+    .alternative-options p {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .alternative-options ul {
+        padding-left: 1.5rem;
+    }
+    
+    .alternative-options li {
+        margin-bottom: 0.3rem;
     }
 }
