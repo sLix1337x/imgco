@@ -419,4 +419,16 @@ footer p {
     .alternative-options li {
         margin-bottom: 0.3rem;
     }
+.loading-status {
+    margin: 15px 0;
+    padding: 10px;
+    border-radius: 4px;
+    background: #f5f5f5;
+    font-size: 14px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
 }
