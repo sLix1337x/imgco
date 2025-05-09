@@ -1,13 +1,7 @@
-// MP4 to GIF Converter - 100% Working Version
 document.addEventListener('DOMContentLoaded', async () => {
   const loadingStatus = document.createElement('div');
   loadingStatus.className = 'loading-status';
   document.getElementById('dropArea').appendChild(loadingStatus);
-
-  // 1. Download these files and add to your project:
-  // https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js
-  // https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.wasm
-  // Put them in same folder as index.html
 
   const { createFFmpeg, fetchFile } = FFmpeg;
   const ffmpeg = createFFmpeg({
@@ -20,7 +14,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       : 'ffmpeg-core.wasm'
   });
 
-  // Load FFmpeg
   try {
     loadingStatus.textContent = 'Loading converter (25MB)...';
     await ffmpeg.load();
@@ -38,7 +31,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // File handling
   document.getElementById('fileInput').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -48,7 +40,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       `${(file.size/(1024*1024)).toFixed(1)}MB - Ready to convert`;
   });
 
-  // Conversion
   document.getElementById('convertBtn').addEventListener('click', async () => {
     const file = document.getElementById('fileInput').files[0];
     if (!file) return;
