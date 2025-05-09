@@ -1,16 +1,32 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  // ===== 1. UI Elements =====
+  console.log('Initializing converter...');
+  
+  // ========================
+  // 1. UI Elements Setup
+  // ========================
   const fileInput = document.getElementById('fileInput');
   const dropArea = document.getElementById('dropArea');
   const convertBtn = document.getElementById('convertBtn');
   const resultArea = document.getElementById('resultArea');
   const gifPreview = document.getElementById('gifPreview');
   const downloadBtn = document.getElementById('downloadBtn');
+  const newConversionBtn = document.getElementById('newConversionBtn');
+  
+  // Create loading status element
   const loadingStatus = document.createElement('div');
   loadingStatus.className = 'loading-status';
   dropArea.appendChild(loadingStatus);
 
-  // ===== 2. FFmpeg Initialization =====
+  // Debug all elements exist
+  console.log('UI elements:', {
+    fileInput, dropArea, convertBtn, 
+    resultArea, gifPreview, downloadBtn
+  });
+
+  // ========================
+  // 2. FFmpeg Initialization
+  // ========================
+  console.log('Loading FFmpeg...');
   const { createFFmpeg, fetchFile } = FFmpeg;
   const ffmpeg = createFFmpeg({
     log: true,
@@ -18,16 +34,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     wasmPath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.wasm'
   });
 
-  // Load FFmpeg with progress tracking
   try {
     loadingStatus.textContent = 'Loading converter (25MB)...';
     convertBtn.disabled = true;
 
+    // Show download progress
     ffmpeg.setProgress(({ ratio }) => {
       const percent = Math.round(ratio * 100);
       loadingStatus.textContent = `Downloading: ${percent}% (${Math.round(25 * ratio)}MB/25MB)`;
     });
 
+    // Load with timeout
     await Promise.race([
       ffmpeg.load(),
       new Promise((_, reject) => 
@@ -37,6 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadingStatus.textContent = 'Converter ready!';
     loadingStatus.style.color = '#4CAF50';
     convertBtn.disabled = false;
+    console.log('FFmpeg loaded successfully!');
 
   } catch (error) {
     loadingStatus.innerHTML = `
@@ -47,12 +65,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       <small>${error.message}</small>
     `;
     loadingStatus.style.color = '#F44336';
-    console.error('FFmpeg error:', error);
+    console.error('FFmpeg loading failed:', error);
     return;
   }
 
-  // ===== 3. File Handling =====
-  // Drag and drop functionality
+  // ========================
+  // 3. File Handling
+  // ========================
+  console.log('Setting up file handlers...');
+  
+  // Drag and drop events
   ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
     dropArea.addEventListener(event, preventDefaults, false);
   });
@@ -62,6 +84,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     e.stopPropagation();
   }
 
+  // Highlight drop area
   ['dragenter', 'dragover'].forEach(event => {
     dropArea.addEventListener(event, highlight, false);
   });
@@ -70,13 +93,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     dropArea.addEventListener(event, unhighlight, false);
   });
 
-  function highlight() { dropArea.classList.add('highlight'); }
-  function unhighlight() { dropArea.classList.remove('highlight'); }
+  function highlight() { 
+    dropArea.classList.add('highlight');
+    console.log('Drag active');
+  }
 
+  function unhighlight() { 
+    dropArea.classList.remove('highlight');
+  }
+
+  // Handle dropped files
   dropArea.addEventListener('drop', handleDrop, false);
   fileInput.addEventListener('change', handleFileSelect);
 
   function handleDrop(e) {
+    console.log('Files dropped:', e.dataTransfer.files);
     const files = e.dataTransfer.files;
     if (files.length) {
       fileInput.files = files;
@@ -85,31 +116,65 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function handleFileSelect() {
+    console.log('File selected:', fileInput.files);
     if (fileInput.files.length) {
       handleFiles(fileInput.files);
     }
   }
 
-  function handleFiles(files) {
-    const file = files[0];
-    
-    if (!file.type.startsWith('video/')) {
-      alert('Please upload a video file (MP4, MOV, etc.)');
-      return;
-    }
+  // Main file processing function
+  async function handleFiles(files) {
+    try {
+      console.log('Handling files:', files);
+      
+      if (!files || !files.length) {
+        throw new Error('No files received');
+      }
 
-    if (file.size > 50 * 1024 * 1024) {
-      alert('File size exceeds 50MB limit');
-      return;
-    }
+      const file = files[0];
+      console.log('Processing file:', {
+        name: file.name,
+        type: file.type,
+        size: file.size
+      });
 
-    dropArea.querySelector('h2').textContent = file.name;
-    dropArea.querySelector('p').textContent = `${(file.size / (1024 * 1024)).toFixed(2)} MB`;
+      // Validate file
+      if (!file.type.startsWith('video/')) {
+        throw new Error(`Unsupported file type: ${file.type}. Please upload a video file.`);
+      }
+
+      if (file.size > 50 * 1024 * 1024) {
+        throw new Error(`File too large: ${(file.size/(1024*1024)).toFixed(1)}MB (max 50MB)`);
+      }
+
+      // Update UI
+      dropArea.querySelector('h2').textContent = file.name;
+      dropArea.querySelector('p').textContent = `${(file.size/(1024*1024)).toFixed(1)}MB - Ready to convert`;
+      
+      // Enable convert button if FFmpeg is ready
+      if (ffmpeg.isLoaded()) {
+        convertBtn.disabled = false;
+      }
+
+    } catch (error) {
+      console.error('File handling error:', error);
+      dropArea.querySelector('h2').textContent = 'Upload Failed';
+      dropArea.querySelector('p').textContent = error.message;
+      dropArea.style.borderColor = '#F44336';
+      setTimeout(() => {
+        dropArea.style.borderColor = '';
+      }, 2000);
+    }
   }
 
-  // ===== 4. Conversion Function =====
+  // ========================
+  // 4. Conversion Function
+  // ========================
   convertBtn.addEventListener('click', async () => {
-    if (!fileInput.files.length) return;
+    if (!fileInput.files.length) {
+      alert('Please select a file first');
+      return;
+    }
 
     const file = fileInput.files[0];
     const quality = document.getElementById('quality').value;
@@ -117,11 +182,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const duration = document.getElementById('duration').value;
     const fps = document.getElementById('fps').value;
 
+    console.log('Starting conversion with settings:', {
+      quality, startTime, duration, fps
+    });
+
+    // Validate inputs
     if (duration <= 0) {
       alert('Duration must be greater than 0');
       return;
     }
 
+    // UI Updates
     convertBtn.textContent = 'Converting...';
     convertBtn.disabled = true;
     loadingStatus.textContent = 'Processing video...';
@@ -130,16 +201,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const gifBlob = await convertToGif(file, quality, startTime, duration, fps);
       displayResult(gifBlob);
+      
     } catch (error) {
-      console.error('Conversion error:', error);
+      console.error('Conversion failed:', error);
       loadingStatus.textContent = `Error: ${error.message}`;
       loadingStatus.style.color = '#F44336';
+      
     } finally {
       convertBtn.textContent = 'Convert to GIF';
     }
   });
 
   async function convertToGif(file, quality, startTime, duration, fps) {
+    console.log('Beginning conversion...');
+    
+    // Quality settings
     let qualityParams;
     switch (quality) {
       case 'high':
@@ -153,8 +229,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         break;
     }
 
+    // Write file to FFmpeg's virtual filesystem
+    console.log('Writing file to FFmpeg FS...');
     ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(file));
     
+    // Run conversion
+    console.log('Executing FFmpeg command...');
     await ffmpeg.run(
       '-ss', startTime.toString(),
       '-t', duration.toString(),
@@ -164,26 +244,60 @@ document.addEventListener('DOMContentLoaded', async () => {
       'output.gif'
     );
 
+    // Read result
+    console.log('Reading output file...');
     const data = ffmpeg.FS('readFile', 'output.gif');
+    
     return new Blob([data.buffer], { type: 'image/gif' });
   }
 
   function displayResult(gifBlob) {
+    console.log('Displaying result...');
     const gifUrl = URL.createObjectURL(gifBlob);
-    gifPreview.innerHTML = `<img src="${gifUrl}" alt="Converted GIF">`;
+    
+    // Create image preview
+    gifPreview.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = gifUrl;
+    img.alt = 'Converted GIF';
+    gifPreview.appendChild(img);
+    
+    // Set up download
     downloadBtn.href = gifUrl;
     downloadBtn.download = `converted-${Date.now()}.gif`;
+    
+    // Show result area
     resultArea.classList.remove('hidden');
     loadingStatus.textContent = 'Conversion complete!';
     loadingStatus.style.color = '#4CAF50';
+    
+    console.log('Conversion successful!');
   }
 
-  // ===== 5. Reset Function =====
-  document.getElementById('newConversionBtn').addEventListener('click', () => {
+  // ========================
+  // 5. Reset Function
+  // ========================
+  newConversionBtn.addEventListener('click', () => {
+    console.log('Resetting converter...');
     fileInput.value = '';
     dropArea.querySelector('h2').textContent = 'Upload MP4 File';
     dropArea.querySelector('p').textContent = 'Drag & drop your video file here or click to browse';
     resultArea.classList.add('hidden');
     convertBtn.disabled = true;
   });
+
+  // ========================
+  // 6. Debug Helpers
+  // ========================
+  // Click drop zone to trigger file input
+  dropArea.addEventListener('click', () => {
+    fileInput.click();
+  });
+
+  // Log all events for debugging
+  fileInput.addEventListener('change', () => {
+    console.log('File input changed:', fileInput.files);
+  });
+
+  console.log('Converter initialized successfully!');
 });
