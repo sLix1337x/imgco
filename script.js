@@ -1,106 +1,102 @@
-// MP4-to-GIF Converter - Final Working Version
-document.addEventListener('DOMContentLoaded', async () => {
-  // 1. Setup UI
+document.addEventListener('DOMContentLoaded', () => {
+  // UI Elements
+  const dropArea = document.getElementById('dropArea');
+  const fileInput = document.getElementById('fileInput');
+  const convertBtn = document.getElementById('convertBtn');
   const loadingStatus = document.createElement('div');
   loadingStatus.className = 'loading-status';
-  document.getElementById('dropArea').appendChild(loadingStatus);
+  dropArea.appendChild(loadingStatus);
+
+  // Video element for processing
+  const video = document.createElement('video');
+  video.style.display = 'none';
+  document.body.appendChild(video);
+
+  // File handling
+  fileInput.addEventListener('change', handleFiles);
   
-  // 2. Configure FFmpeg with reliable CDN
-  const { createFFmpeg, fetchFile } = FFmpeg;
-  const ffmpeg = createFFmpeg({
-    log: true,
-    corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
-    wasmPath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.wasm'
-  });
+  function handleFiles(e) {
+    const file = e.target.files[0];
+    if (!file || !file.type.includes('video')) {
+      alert('Please select a video file');
+      return;
+    }
 
-  // 3. Load FFmpeg with error handling
-  try {
-    loadingStatus.textContent = 'Loading converter (20MB)...';
+    const videoURL = URL.createObjectURL(file);
+    video.src = videoURL;
     
-    // Show loading progress
-    ffmpeg.setProgress(({ ratio }) => {
-      const percent = Math.round(ratio * 100);
-      loadingStatus.textContent = `Downloading: ${percent}% - Please wait...`;
-    });
-
-    // Load with 60-second timeout
-    await Promise.race([
-      ffmpeg.load(),
-      new Promise((_, reject) => 
-        setTimeout(() => reject('Timeout after 60 seconds'), 60000)
-      )
-    ]);
-    
-    loadingStatus.textContent = 'Ready to convert!';
-    document.getElementById('convertBtn').disabled = false;
-
-  } catch (error) {
-    loadingStatus.innerHTML = `
-      <strong>Fix:</strong><br>
-      1. Refresh page<br>
-      2. Try Chrome/Firefox<br>
-      3. Check internet<br>
-      <small>${error}</small>
-    `;
-    console.error('FFmpeg error:', error);
-    return;
+    dropArea.querySelector('h2').textContent = file.name;
+    dropArea.querySelector('p').textContent = `${(file.size/(1024*1024)).toFixed(1)}MB - Ready to convert`;
+    convertBtn.disabled = false;
   }
 
-  // 4. File handling
-  document.getElementById('fileInput').addEventListener('change', function(e) {
-    const file = e.target.files[0];
+  // Conversion
+  convertBtn.addEventListener('click', async () => {
+    const file = fileInput.files[0];
     if (!file) return;
-    
-    if (!file.type.includes('video')) {
-      alert('Please upload a video file (MP4, MOV, etc.)');
-      return;
-    }
 
-    document.getElementById('dropArea').querySelector('h2').textContent = file.name;
-    document.getElementById('dropArea').querySelector('p').textContent = 
-      `${(file.size/(1024*1024)).toFixed(1)}MB - Ready to convert`;
-  });
-
-  // 5. Conversion function
-  document.getElementById('convertBtn').addEventListener('click', async () => {
-    const file = document.getElementById('fileInput').files[0];
-    if (!file) {
-      alert('Please select a file first');
-      return;
-    }
-
-    const convertBtn = document.getElementById('convertBtn');
     convertBtn.disabled = true;
-    loadingStatus.textContent = 'Converting...';
+    loadingStatus.textContent = 'Preparing...';
 
-    try {
-      // Write file to FFmpeg's filesystem
-      ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(file));
-      
-      // Convert with reliable settings
-      await ffmpeg.run(
-        '-i', 'input.mp4',          // Input file
-        '-vf', 'fps=10,scale=640:-1', // 10 FPS, width 640px
-        '-f', 'gif',               // Output format
-        'output.gif'               // Output file
-      );
+    // Wait for video to load
+    await new Promise(resolve => {
+      video.onloadedmetadata = resolve;
+      if (video.readyState >= 3) resolve(); // Already loaded
+    });
 
-      // Get result
-      const data = ffmpeg.FS('readFile', 'output.gif');
-      const gifUrl = URL.createObjectURL(new Blob([data.buffer], { type: 'image/gif' }));
-      
-      // Display result
-      document.getElementById('gifPreview').innerHTML = `<img src="${gifUrl}" alt="Converted GIF">`;
+    // Get user settings
+    const fps = parseInt(document.getElementById('fps').value);
+    const duration = parseInt(document.getElementById('duration').value);
+    const startTime = parseInt(document.getElementById('startTime').value);
+    
+    // Setup GIF encoder
+    const gif = new GIF({
+      workers: 2,
+      quality: 10,
+      width: video.videoWidth,
+      height: video.videoHeight,
+      workerScript: 'https://cdn.jsdelivr.net/npm/gif.js/dist/gif.worker.js'
+    });
+
+    // Process frames
+    const frameCount = Math.min(duration * fps, 100); // Max 100 frames
+    const interval = 1 / fps;
+    
+    loadingStatus.textContent = `Processing 0/${frameCount} frames...`;
+    
+    for (let i = 0; i < frameCount; i++) {
+      const time = startTime + i * interval;
+      await processFrame(video, time, gif);
+      loadingStatus.textContent = `Processing ${i+1}/${frameCount} frames...`;
+    }
+
+    // Render GIF
+    gif.on('finished', (blob) => {
+      const gifUrl = URL.createObjectURL(blob);
+      document.getElementById('gifPreview').innerHTML = `<img src="${gifUrl}">`;
       document.getElementById('downloadBtn').href = gifUrl;
       document.getElementById('resultArea').classList.remove('hidden');
       loadingStatus.textContent = 'Done!';
-      
-    } catch (error) {
-      console.error('Conversion failed:', error);
-      loadingStatus.textContent = `Error: ${error.message}`;
-      alert('Conversion failed. Try a shorter video or different format.');
-    } finally {
       convertBtn.disabled = false;
-    }
+    });
+
+    gif.render();
   });
+
+  // Process individual frame
+  function processFrame(video, time) {
+    return new Promise(resolve => {
+      video.currentTime = time;
+      
+      video.onseeked = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+        gif.addFrame(canvas, {delay: 1000 / fps, copy: true});
+        resolve();
+      };
+    });
+  }
 });
